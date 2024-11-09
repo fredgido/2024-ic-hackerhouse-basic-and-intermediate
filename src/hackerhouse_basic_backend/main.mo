@@ -11,14 +11,15 @@ import { phash; nhash } "mo:map/Map";
 import Principal "mo:base/Principal";
 import Vector "mo:vector";
 
-type UserCompleteProfile = {
-    name : Text;
-    socials_linkedin : Text;
-    socials_twitter : Text;
-    socials_github : Text;
-};
+
 
 actor {
+    type UserCompleteProfile = {
+        name : Text;
+        socials_linkedin : Text;
+        socials_twitter : Text;
+        socials_github : Text;
+    };
     stable var autoIndex = 0;
     let userIdMap = Map.new<Principal, Nat>();
     let userProfileMap = Map.new<Nat, Text>();
