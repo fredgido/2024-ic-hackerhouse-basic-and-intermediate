@@ -1,0 +1,26 @@
+services:
+  icp-dev:
+    image: ghcr.io/dfinity/icp-dev-env:12
+    volumes:
+      - .:/workspace
+      - ./caches/.cache:/root/.cache
+      - ./caches/.dfx:/root/.dfx
+      - ./caches/.npm:/root/.npm
+    working_dir: /workspace
+#    ports:
+#      - "4943:4943"  # dfx
+#      - "8080:8080"  # dev server
+#      - "3000:3000"  # dev server
+    network_mode: "host"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:127.0.0.1"
+    environment:
+      - NODE_ENV=development
+      - DFX_NETWORK=local
+    # Keep the container running
+    # command: tail -f /dev/null
+    command: bash -c "scripts/setup.sh"
+    # Enable interactive terminal
+    stdin_open: true
+    tty: true
