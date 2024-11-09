@@ -5,22 +5,161 @@ import Array "mo:base/Array";
 import Blob "mo:base/Blob";
 import Text "mo:base/Text";
 import Cycles "mo:base/ExperimentalCycles";
+import Debug "mo:base/Debug";
+import Map "mo:map/Map";
+import { phash; nhash } "mo:map/Map";
+import Principal "mo:base/Principal";
+import Vector "mo:vector";
+
+type UserCompleteProfile = {
+    name : Text;
+    socials_linkedin : Text;
+    socials_twitter : Text;
+    socials_github : Text;
+};
 
 actor {
+    stable var autoIndex = 0;
+    let userIdMap = Map.new<Principal, Nat>();
+    let userProfileMap = Map.new<Nat, Text>();
+    let userResultsMap = Map.new<Nat, Vector.Vector<Text>>();
+    let userCompleteProfileMap = Map.new<Nat, UserCompleteProfile>();
+
+    public query ({ caller }) func getCurrentUserIdentity() : async Principal {
+        return caller;
+    };
+
+    public query ({ caller }) func checkIfLoggedIn() : async Text {
+        if (caller == Principal.fromText("2vxsx-fae")) {
+            return "You are using \"2vxsx-fae\", which is the anonymous principal. You should authenticate.";
+        } else {
+            return "Looks good! Your Principal is a distinct one.";
+        };
+    };
+
     public query ({ caller }) func getUserProfile() : async Result.Result<{ id : Nat; name : Text }, Text> {
-        return #ok({ id = 123; name = "test" });
+        let maybeUserId = Map.get(userIdMap, phash, caller);
+        switch (maybeUserId) {
+            case (?userId) {
+                let maybeProfile = Map.get(userProfileMap, nhash, userId);
+                switch (maybeProfile) {
+                    case (?name) {
+                        return #ok({ id = userId; name = name });
+                    };
+                    case (_) {
+                        return #err("Profile not found for user");
+                    };
+                };
+            };
+            case (_) {
+                return #err("You are not registered, use setUserProfile to set your profile");
+            };
+        };
     };
 
     public shared ({ caller }) func setUserProfile(name : Text) : async Result.Result<{ id : Nat; name : Text }, Text> {
-        return #ok({ id = 123; name = "test" });
+        switch (Map.get(userIdMap, phash, caller)) {
+            case (?x) {};
+            case (_) {
+                // set user id
+                Map.set(userIdMap, phash, caller, autoIndex);
+                // increment for next user
+                autoIndex += 1;
+            };
+        };
+
+        // set profile name
+        let foundId = switch (Map.get(userIdMap, phash, caller)) {
+            case (?found) found;
+            case (_) { return #err("User not found") };
+        };
+
+        Map.set(userProfileMap, nhash, foundId, name);
+
+        return #ok({ id = foundId; name = name });
+    };
+
+    public query func getUserProfileById(id : Nat) : async Result.Result<{ id : Nat; name : Text }, Text> {
+        let maybeProfile = Map.get(userProfileMap, nhash, id);
+        switch (maybeProfile) {
+            case (?name) {
+                return #ok({ id = id; name = name });
+            };
+            case (_) {
+                return #err("Profile not found for the given ID");
+            };
+        };
     };
 
     public shared ({ caller }) func addUserResult(result : Text) : async Result.Result<{ id : Nat; results : [Text] }, Text> {
-        return #ok({ id = 123; results = ["fake result"] });
+        let userId = switch (Map.get(userIdMap, phash, caller)) {
+            case (?found) found;
+            case (_) return #err("User not found");
+        };
+
+        let results = switch (Map.get(userResultsMap, nhash, userId)) {
+            case (?found) found;
+            case (_) Vector.new<Text>();
+        };
+
+        Vector.add(results, result);
+        Map.set(userResultsMap, nhash, userId, results);
+
+        return #ok({ id = userId; results = Vector.toArray(results) });
     };
 
     public query ({ caller }) func getUserResults() : async Result.Result<{ id : Nat; results : [Text] }, Text> {
-        return #ok({ id = 123; results = ["fake result"] });
+
+        let maybeUserId = Map.get(userIdMap, phash, caller);
+        let userId = switch (maybeUserId) {
+            case (?id) id;
+            case (_) return #err("User not registered");
+        };
+
+        let maybeResults = Map.get(userResultsMap, nhash, userId);
+        let results = switch (maybeResults) {
+            case (?res) Vector.toArray(res);
+            case (_) [];
+        };
+
+        return #ok({ id = userId; results = results });
+    };
+
+    public shared ({ caller }) func setUserCompleteProfile(
+        name : Text,
+        socials_linkedin : Text,
+        socials_twitter : Text,
+        socials_github : Text,
+    ) : async Result.Result<{ id : Nat; profile : UserCompleteProfile }, Text> {
+
+        let maybeUserId = Map.get(userIdMap, phash, caller);
+        let userId = switch (maybeUserId) {
+            case (?id) id;
+            case (_) return #err("User not registered");
+        };
+
+        let profile : UserCompleteProfile = {
+            name = name;
+            socials_linkedin = socials_linkedin;
+            socials_twitter = socials_twitter;
+            socials_github = socials_github;
+        };
+
+        Map.set(userCompleteProfileMap, nhash, userId, profile);
+
+        return #ok({ id = userId; profile = profile });
+    };
+
+    public query func getUserCompleteProfile(id : Nat) : async Result.Result<UserCompleteProfile, Text> {
+        let maybeProfile = Map.get(userCompleteProfileMap, nhash, id);
+        switch (maybeProfile) {
+            case (?profile) {
+                return #ok(profile);
+            };
+            case (_) {
+                return #err("Profile not found for the given user ID");
+            };
+        };
     };
 
     public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text }, Text> {
