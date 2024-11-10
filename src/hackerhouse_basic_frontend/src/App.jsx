@@ -13,7 +13,8 @@ function App() {
   useEffect(() => {
     if (backendActor) {
       setIsLoadingProfile(true);
-      backendActor.getUserProfile()
+      backendActor
+        .getUserProfile()
         .then((response) => {
           if (response.ok) {
             setUserId(response.ok.id.toString());
@@ -55,7 +56,8 @@ function App() {
     setSentimentResult(null);
     setSentimentConfidence(null);
 
-    backendActor.outcall_ai_model_for_sentiment_analysis(paragraph)
+    backendActor
+      .outcall_ai_model_for_sentiment_analysis(paragraph)
       .then((response) => {
         if (response.ok) {
           console.log(response);
@@ -105,26 +107,29 @@ function App() {
           <hr className="my-4" />
 
           <form action="#" onSubmit={handleSentimentAnalysis}>
-            <label htmlFor="paragraph">Enter text for sentiment analysis: &nbsp;</label>
+            <label htmlFor="paragraph">
+              Enter text for sentiment analysis: &nbsp;
+            </label>
             <textarea
               id="paragraph"
               rows="4"
               className="w-full p-2 border rounded"
             />
-            <button
-              type="submit"
-              disabled={isAnalyzing}
-              className="mt-2"
-            >
-              {isAnalyzing ? 'Analyzing...' : 'Analyze Sentiment'}
+            <button type="submit" disabled={isAnalyzing} className="mt-2">
+              {isAnalyzing ? "Analyzing..." : "Analyze Sentiment"}
             </button>
           </form>
 
           {sentimentResult && (
             <section className="response mt-4">
-              <p><strong>Sentiment:</strong> {sentimentResult}</p>
+              <p>
+                <strong>Sentiment:</strong> {sentimentResult}
+              </p>
               {sentimentConfidence && (
-                <p><strong>Confidence:</strong> {(sentimentConfidence * 100).toFixed(2)}%</p>
+                <p>
+                  <strong>Confidence:</strong>{" "}
+                  {(sentimentConfidence * 100).toFixed(2)}%
+                </p>
               )}
             </section>
           )}

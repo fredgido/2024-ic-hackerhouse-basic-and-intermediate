@@ -163,7 +163,7 @@ actor {
         };
     };
 
-    public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text; confidence :Float }, Text> {
+    public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text; confidence : Float }, Text> {
         let host = "api.fredgido.com";
         let path = "/models/cardiffnlp/twitter-roberta-base-sentiment-latest";
 
@@ -190,7 +190,7 @@ actor {
             case (_) { return #err("Error decoding JSON: " # text_response) };
         };
 
-        let results : ?[[{label_ : Text; score : Float}]] = from_candid(blob);
+        let results : ?[[{ label_ : Text; score : Float }]] = from_candid (blob);
         let parsed_results = switch (results) {
             case (null) { return #err("Error parsing JSON: " # text_response) };
             case (?x) { x[0] };
