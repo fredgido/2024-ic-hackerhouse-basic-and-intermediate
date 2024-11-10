@@ -1,4 +1,3 @@
-// import the custom types we have in Types.mo
 import Types "types";
 import Result "mo:base/Result";
 import Array "mo:base/Array";
@@ -163,7 +162,13 @@ actor {
         };
     };
 
-    public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text; confidence : Float }, Text> {
+    public shared ({ caller }) func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text; confidence : Float }, Text> {
+        // Get user ID
+        let userId = switch (Map.get(userIdMap, phash, caller)) {
+            case (?id) id;
+            case (_) return #err("User not registered");
+        };
+
         let host = "api.fredgido.com";
         let path = "/models/cardiffnlp/twitter-roberta-base-sentiment-latest";
 
@@ -176,15 +181,9 @@ actor {
         ];
 
         let body_json : Text = "{ \"inputs\" : \" " # paragraph # "\" }";
-        //let body_json : Text = "{\"inputs\": \"I love this new product! It is amazing!\"}";
 
         let text_response = await make_post_http_outcall(host, path, headers, body_json);
 
-        // return #err(text_response)
-        // Debug.print(text_response)
-
-        // TODO
-        // Install "serde" package and parse JSON
         let blob = switch (JSON.fromText(text_response, null)) {
             case (#ok(b)) { b };
             case (_) { return #err("Error decoding JSON: " # text_response) };
@@ -205,6 +204,19 @@ actor {
                 best_result := parsed_results[i].label_;
             };
         };
+
+        // Create result JSON
+        let result_json = "{ \"text\": \"" # paragraph # "\", \"sentiment\": \"" # best_result # "\", \"confidence\": " # Float.toText(best_score) # " }";
+
+        // Get or create results vector for user
+        let results_vector = switch (Map.get(userResultsMap, nhash, userId)) {
+            case (?found) found;
+            case (_) Vector.new<Text>();
+        };
+
+        // Add new result
+        Vector.add(results_vector, result_json);
+        Map.set(userResultsMap, nhash, userId, results_vector);
 
         return #ok({
             paragraph = paragraph;
