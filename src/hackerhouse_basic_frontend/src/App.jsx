@@ -81,7 +81,7 @@ function App() {
       <img src="/logo2.svg" alt="DFINITY logo" />
       <br />
       <br />
-      <h1>Welcome to IC AI Hacker House!</h1>
+      <h1>Welcome to Fredgido's IC AI Hacker House!</h1>
       {!backendActor && (
         <section id="nfid-section">
           <NfidLogin setBackendActor={setBackendActor}></NfidLogin>
