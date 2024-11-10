@@ -6,6 +6,7 @@ services:
       - ./caches/.cache:/root/.cache
       - ./caches/.dfx:/root/.dfx
       - ./caches/.npm:/root/.npm
+      - ./identity:/root/.config/dfx/identity
     working_dir: /workspace
 #    ports:
 #      - "4943:4943"  # dfx
@@ -17,7 +18,7 @@ services:
       - "localhost:127.0.0.1"
     environment:
       - NODE_ENV=development
-      - DFX_NETWORK=local
+      - DFX_NETWORK=ic
     # Keep the container running
     # command: tail -f /dev/null
     command: bash -c "scripts/setup.sh"

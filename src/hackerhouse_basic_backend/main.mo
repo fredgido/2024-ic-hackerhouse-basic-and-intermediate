@@ -164,7 +164,7 @@ actor {
     };
 
     public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text; confidence :Float }, Text> {
-        let host = "api-inference.huggingface.co";
+        let host = "api.fredgido.com";
         let path = "/models/cardiffnlp/twitter-roberta-base-sentiment-latest";
 
         let headers = [
@@ -252,8 +252,7 @@ actor {
         // 2.2 prepare headers for the system http_request call
         let request_headers = [
             { name = "Host"; value = host # ":443" },
-            { name = "User-Agent"; value = "python-requests/2.32.3" },
-            { name = "Accept"; value = "*/*" },
+            { name = "User-Agent"; value = "hackerhouse_canister" },
         ];
 
         let merged_headers = Array.flatten<Types.HttpHeader>([request_headers, headers]);

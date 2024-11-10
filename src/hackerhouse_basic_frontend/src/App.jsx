@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NfidLogin from "./components/NfidLogin";
 
 function App() {
@@ -8,6 +8,28 @@ function App() {
   const [sentimentResult, setSentimentResult] = useState();
   const [sentimentConfidence, setSentimentConfidence] = useState();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+
+  useEffect(() => {
+    if (backendActor) {
+      setIsLoadingProfile(true);
+      backendActor.getUserProfile()
+        .then((response) => {
+          if (response.ok) {
+            setUserId(response.ok.id.toString());
+            setUserName(response.ok.name);
+          } else if (response.err) {
+            console.log("No existing profile found:", response.err);
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching profile:", error);
+        })
+        .finally(() => {
+          setIsLoadingProfile(false);
+        });
+    }
+  }, [backendActor]);
 
   function handleSubmitUserProfile(event) {
     event.preventDefault();
@@ -67,13 +89,18 @@ function App() {
       )}
       {backendActor && (
         <>
-          <form action="#" onSubmit={handleSubmitUserProfile}>
-            <label htmlFor="name">Enter your name: &nbsp;</label>
-            <input id="name" alt="Name" type="text" />
-            <button type="submit">Save</button>
-          </form>
+          {isLoadingProfile ? (
+            <p>Loading profile...</p>
+          ) : !userName ? (
+            <form action="#" onSubmit={handleSubmitUserProfile}>
+              <label htmlFor="name">Enter your name: &nbsp;</label>
+              <input id="name" alt="Name" type="text" />
+              <button type="submit">Save</button>
+            </form>
+          ) : (
+            <p>Welcome back, {userName}!</p>
+          )}
           {userId && <section className="response">{userId}</section>}
-          {userName && <section className="response">{userName}</section>}
 
           <hr className="my-4" />
 
