@@ -9,9 +9,9 @@ import Debug "mo:base/Debug";
 import Map "mo:map/Map";
 import { phash; nhash } "mo:map/Map";
 import Principal "mo:base/Principal";
+import Float "mo:base/Float";
 import Vector "mo:vector";
-
-
+import { JSON } "mo:serde";
 
 actor {
     type UserCompleteProfile = {
@@ -163,29 +163,53 @@ actor {
         };
     };
 
-    public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text }, Text> {
+    public func outcall_ai_model_for_sentiment_analysis(paragraph : Text) : async Result.Result<{ paragraph : Text; result : Text; confidence :Float }, Text> {
         let host = "api-inference.huggingface.co";
         let path = "/models/cardiffnlp/twitter-roberta-base-sentiment-latest";
 
         let headers = [
             {
                 name = "Authorization";
-                value = "Bearer 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";
+                value = "Bearer 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";
             },
             { name = "Content-Type"; value = "application/json" },
         ];
 
         let body_json : Text = "{ \"inputs\" : \" " # paragraph # "\" }";
+        //let body_json : Text = "{\"inputs\": \"I love this new product! It is amazing!\"}";
 
         let text_response = await make_post_http_outcall(host, path, headers, body_json);
 
+        // return #err(text_response)
+        // Debug.print(text_response)
+
         // TODO
         // Install "serde" package and parse JSON
-        // calculate highest sentiment and return it as a result
+        let blob = switch (JSON.fromText(text_response, null)) {
+            case (#ok(b)) { b };
+            case (_) { return #err("Error decoding JSON: " # text_response) };
+        };
+
+        let results : ?[[{label_ : Text; score : Float}]] = from_candid(blob);
+        let parsed_results = switch (results) {
+            case (null) { return #err("Error parsing JSON: " # text_response) };
+            case (?x) { x[0] };
+        };
+
+        var best_score : Float = 0;
+        var best_result : Text = "";
+
+        for (i in parsed_results.keys()) {
+            if (parsed_results[i].score > best_score) {
+                best_score := parsed_results[i].score;
+                best_result := parsed_results[i].label_;
+            };
+        };
 
         return #ok({
             paragraph = paragraph;
-            result = text_response;
+            result = best_result;
+            confidence = best_score;
         });
     };
 
@@ -228,7 +252,8 @@ actor {
         // 2.2 prepare headers for the system http_request call
         let request_headers = [
             { name = "Host"; value = host # ":443" },
-            { name = "User-Agent"; value = "hackerhouse_canister" },
+            { name = "User-Agent"; value = "python-requests/2.32.3" },
+            { name = "Accept"; value = "*/*" },
         ];
 
         let merged_headers = Array.flatten<Types.HttpHeader>([request_headers, headers]);
@@ -250,7 +275,7 @@ actor {
         let http_request : Types.HttpRequestArgs = {
             url = url;
             max_response_bytes = null; //optional for request
-            headers = request_headers;
+            headers = merged_headers;
             // note: type of `body` is ?[Nat8] so it is passed here as "?request_body_as_nat8" instead of "request_body_as_nat8"
             body = ?request_body_as_nat8;
             method = #post;
